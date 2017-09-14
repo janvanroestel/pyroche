@@ -272,7 +272,7 @@ def get_radii(q,F,P,xatol=10**-8):
 
 
 
-def get_radii_from_qRfr(q,Rfr,xatol=10**-8):
+def get_radii_from_qRfr(q,Rfr,p=1,xatol=10**-8):
     """ get the different radii for the star given q and R front
 
     Parameters
@@ -281,6 +281,8 @@ def get_radii_from_qRfr(q,Rfr,xatol=10**-8):
         the mass ratio of the binary 
     Rfr: float
         the radius of the star in the front direction
+    p: float
+        synchronisation parameter. p=1 is co-rotation, p<1 slow rotation, p>1 fast rotation
 
     Returns
     -------
@@ -299,14 +301,14 @@ def get_radii_from_qRfr(q,Rfr,xatol=10**-8):
     """
 
     # check if Rfr =< RL1
-    f = lambda r: potential(r,0.5*np.pi,0.,q,1.0)
+    f = lambda r: potential(r,0.5*np.pi,0.,q,p)
     RL1 = scipy.optimize.minimize_scalar(f, bounds = [0.,1.],method='Bounded',
         options={'xatol':xatol*q}).x
 
     if Rfr > RL1:
         raise ValueError("Rfr > RL1")
 
-    f = lambda F: get_Rfr(q,F,1.0) - Rfr
+    f = lambda F: get_Rfr(q,F,p) - Rfr
     F = scipy.optimize.bisect(f,a=0.0,b=1-10**-8)
 
-    return get_radii(q,F,1.0)
+    return get_radii(q,F,p)
