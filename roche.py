@@ -31,16 +31,17 @@ import matplotlib.pyplot as plt
 
 def get_REg(q):
     """ the approximation by Eggleton for the volume radius of a roche lobe.
+    see: https://adsabs.harvard.edu/full/1983ApJ...268..368E
 
     Parameters
     ----------
     q : float
-        the mass ratio of the binary
+        the mass ratio of the binary (M2/M1)
 
     Returns
     -------
     R : float
-        the approximation to the roche lobe volumetric radius
+        the approximation to the roche lobe volumetric radius (for star 2)
 
     """
     R = 0.49*q**(2./3)
