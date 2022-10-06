@@ -52,14 +52,22 @@ def get_REg(q):
 def potential(r,theta,phi,q,P):
     """ Unitless asynchronous Roche potential in spherical coordinates.
 
+    The coordinate system used on spherical.
+    theta = pi/2 and phi = 0 it in the direction of the other star 
+    theta = pi/2 and phi = pi it in the anti-direction of the other star 
+    theta = 0 and phi = [0,2pi] it in direction of the north pole
+    theta = pi and phi = [0,2pi] it in direction of the south pole
+
+
     Parameters
     ----------
     r : float
         the distance from star 1 (needs to be positive)
     theta : float
-        angle between x and y axis, the rotation plane
-    phi : float
         angle between rotation plane and z-axis
+    phi : float
+        angle between x and y axis, the rotation plane. 
+        phi=0 points to the other star, phi=pi away from the other star
     q : float
         the mass ratio of the binary 
     P : float
@@ -151,6 +159,47 @@ def get_radius(theta,phi,q,OmegaF,P,RL1,xatol=10**-8):
 
 
 
+def get_rocheradius(theta,phi,q,P,xatol=10**-8):
+    """ get the different radii for the star
+
+    Parameters
+    ----------
+    q : float
+        the mass ratio of the binary 
+    P : float
+        synchronisation parameter
+
+    Returns
+    -------
+    R : roche radius in direction of theta and phi
+    """
+
+    F = 1
+
+    # find L1
+    f = lambda r: potential(r,0.5*np.pi,0.,q,P)
+    RL1 = scipy.optimize.minimize_scalar(f, bounds = [0.,1.],method='Bounded',
+        options={'xatol':xatol*q}).x
+    OmegaL1 = potential(RL1,0.5*np.pi,0.,q,P)
+
+    # calculate potential level at the surface
+    OmegaF = (OmegaL1+q*q/2.0/(1.0+q))/F - q*q/2.0/(1.0+q)
+
+    # calculate the radii in y
+    f = lambda r: potential(r,theta,phi,q,P) - OmegaF
+    if theta == 0.5*np.pi and phi%(2*np.pi) == 0.:
+        return RL1
+
+    #print(theta/np.pi,phi/np.pi)
+    R_max = scipy.optimize.minimize_scalar(f, bounds = [0.,RL1],method='Bounded',
+        options={'xatol':xatol*q}).x
+    R = scipy.optimize.bisect(f, a=0,b=R_max)
+    
+    return R
+
+
+
+
 def get_volume(q,OmegaF,P,RL1,epsrel=10**-3):
     """ get the volume of the star
 
@@ -233,12 +282,12 @@ def get_radii(q,F,P,xatol=10**-8):
         Rfr = scipy.optimize.bisect(f, a=0,b=RL1)
 
     # calculate the radii to the back
-    theta = 1.5*np.pi
-    phi = 0.
+    theta = 0.5*np.pi
+    phi = np.pi
     f = lambda r: potential(r,theta,phi,q,P) - OmegaF
     Rbk = scipy.optimize.bisect(f, a=0,b=RL1)
 
-    # calculate the radii to the back
+    # calculate the radii to the side
     theta = 0.5*np.pi
     phi = 0.5*np.pi
     f = lambda r: potential(r,theta,phi,q,P) - OmegaF
@@ -252,7 +301,7 @@ def get_radii(q,F,P,xatol=10**-8):
     f = lambda r: potential(r,theta,phi,q,P) - OmegaF
     Rz_max = scipy.optimize.minimize_scalar(f, bounds = [0.,RL1],method='Bounded',
         options={'xatol':xatol*q}).x
-    Rz = scipy.optimize.bisect(f, a=0,b=Ry_max)  
+    Rz = scipy.optimize.bisect(f, a=0,b=Rz_max)  
 
     # get volume of star
     volstar = get_volume(q,OmegaF,P,RL1)
