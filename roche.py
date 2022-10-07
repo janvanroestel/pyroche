@@ -145,6 +145,8 @@ def get_radius(theta,phi,q,OmegaF,P,RL1,xatol=10**-8):
         the potential level at the surface of the star
     P : float
         synchronisation parameter
+    RL1 : float
+        the distance to the L1 point, used a upper limit for the radius
 
     Returns
     -------
@@ -202,7 +204,7 @@ def get_rocheradius(theta,phi,q,P,xatol=10**-8):
 
 
 def get_volume(q,OmegaF,P,RL1,epsrel=10**-3):
-    """ get the volume of the star
+    """ get the volume of the star by solving a 2d integration
 
     Parameters
     ----------
@@ -212,6 +214,8 @@ def get_volume(q,OmegaF,P,RL1,epsrel=10**-3):
         the potential level at the surface of the star
     P : float
         synchronisation parameter
+    RL1 : float
+        the roche lobe radius 
 
     Returns
     -------
@@ -227,9 +231,37 @@ def get_volume(q,OmegaF,P,RL1,epsrel=10**-3):
 
     f = lambda r,theta,phi: r**2*np.sin(phi)
 
+    # integration of one half of the roche lobe
     output = scipy.integrate.tplquad(f,a,b,gfun,hfun,qfun,rfun,epsrel=epsrel)
 
     return 2*output[0] # the factor 2 is because we only calculated one half
+
+
+def get_RL1(q,P,xatol=10**-8):
+    """ calculate the distance towards L1
+
+    Parameters
+    ----------
+    q : float
+        the mass ratio of the binary 
+    F : float
+        the fill factor of the potential
+    P : float
+        synchronisation parameter
+
+    Returns
+    -------
+    RL1 : float
+        the size of the Roche lobe
+    """
+
+    theta = 0.5*np.pi
+    phi = 0.
+    f = lambda r: potential(r,theta,phi,q,P)
+    RL1 = scipy.optimize.minimize_scalar(f, bounds = [0.,1.],method='Bounded',
+        options={'xatol':xatol*q}).x
+
+    return RL1
 
 
 
@@ -322,6 +354,53 @@ def get_radii(q,F,P,xatol=10**-8):
 
 
 
+def get_radii_from_qRvol(q,Rvol,P=1,xatol=10**-8):
+    """ get the different radii for the star given q and volumetric R
+
+    Parameters
+    ----------
+    q : float
+        the mass ratio of the binary 
+    Rvol: float
+        the radius of the star in the front direction
+    p: float
+        synchronisation parameter. p=1 is co-rotation, p<1 slow rotation, p>1 fast rotation
+
+    Returns
+    -------
+    RL1 : float
+        the size of the Roche lobe
+    Rfr : float
+        the front size of the star
+    Rbk : float
+        the back size of the star
+    Ry : float
+        the radius in the y direction
+    Rz : float
+        the radius in the z direction (top)
+    Rvol : float
+        the volumetric radius of the star
+    REg : the radius of the roche lobe using the Eggleton approximation
+    """
+
+    # from the volume, recontruct the potential level
+    RL1 = get_RL1(q,P,xatol=10**-8)
+    b = potential(Rvol,0.5*np.pi,0,q,P)
+    OmegaL1 = potential(RL1,0.5*np.pi,0,q,P)
+
+    # calculate volumetric radii and find the correct OmegaF    
+    f = lambda OmegaF: get_volume(q,OmegaF,P=1,RL1=RL1,epsrel=10**-3) - (4./3 *np.pi * Rvol**3 )
+    OmegaF = scipy.optimize.bisect(f,a=OmegaL1,b=b)
+
+    # calculate the fill factor given the L1 and surface potential levels
+    F  = (OmegaL1+q*q/2.0/(1.0+q)) / (OmegaF + q*q/2.0/(1.0+q))
+
+    # from the potential value, calculate the radii
+
+    return get_radii(q,F,P,xatol=10**-8)
+
+
+
 def get_radii_from_qRfr(q,Rfr,p=1,xatol=10**-8):
     """ get the different radii for the star given q and R front
 
@@ -348,6 +427,7 @@ def get_radii_from_qRfr(q,Rfr,p=1,xatol=10**-8):
         the radius in the z direction (top)
     Rvol : float
         the volumetric radius of the star
+    REg : the radius of the roche lobe using the Eggleton approximation
     """
 
     # check if Rfr =< RL1
@@ -360,5 +440,7 @@ def get_radii_from_qRfr(q,Rfr,p=1,xatol=10**-8):
 
     f = lambda F: get_Rfr(q,F,p) - Rfr
     F = scipy.optimize.bisect(f,a=0.0,b=1-10**-8)
+
+    print("F=%f" %F)
 
     return get_radii(q,F,p)
