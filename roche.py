@@ -355,12 +355,12 @@ def get_radii(q,F,P,xatol=10**-8):
 
 
 def get_radii_from_qRvol(q,Rvol,P=1,xatol=10**-8):
-    """ get the different radii for the star given q and volumetric R
+    """ get the different radii for the star given q and volumetric R1
 
     Parameters
     ----------
     q : float
-        the mass ratio of the binary 
+        the mass ratio of the binary (M2/M1)
     Rvol: float
         the radius of the star in the front direction
     p: float
@@ -382,6 +382,13 @@ def get_radii_from_qRvol(q,Rvol,P=1,xatol=10**-8):
         the volumetric radius of the star
     REg : the radius of the roche lobe using the Eggleton approximation
     """
+
+    # do a quick check if the star is inside its Roche lobe
+    if Rvol > 1.02*get_REg(q**-1):
+        print("WARNING: the volumetric radius seems to be much larger than the volume of the Roche lobe. Check the input values q and Rvol. ")
+
+    if Rvol <= 1.02*get_REg(q**-1) and Rvol > 0.98*get_REg(q**-1):
+        print("WARNING: the volumetric radius seems to be close to filling the Roche lobe. ")
 
     # from the volume, recontruct the potential level
     RL1 = get_RL1(q,P,xatol=10**-8)
