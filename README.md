@@ -12,6 +12,8 @@ volume and Eggleton radii.
 
 About the code
 ==============
+I mainly made this code for myself to understand Roche lobes and to be able to 
+convert/calculate the different radii (e.g. volumentric radius to front radius).
 Note that this code is not tested properly so use it at your own risk. A few
 quick comparisons with the results from the fortran code by Leahy and Leahy
 show identical results in the test cases. Problems can occur for high values 
